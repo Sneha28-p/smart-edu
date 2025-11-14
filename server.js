@@ -1,12 +1,6 @@
-// -----------------------------
-// Load .env
-// -----------------------------
 import dotenv from "dotenv";
 dotenv.config();
 
-// -----------------------------
-// Imports (ESM Only)
-// -----------------------------
 import express from "express";
 import cors from "cors";
 import axios from "axios";
@@ -15,24 +9,18 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// -----------------------------
-// Setup
-// -----------------------------
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// -----------------------------
 // Middleware
-// -----------------------------
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
-// =============================
 //  IMPORT predict.js (ESM)
-// =============================
 const predictRoutePath = path.join(__dirname, "routes", "predict.js");
 
 if (fs.existsSync(predictRoutePath)) {
@@ -49,9 +37,7 @@ if (fs.existsSync(predictRoutePath)) {
   console.warn("⚠ predict.js file missing");
 }
 
-// =============================
 //  IMPORT roadmap.js (ESM)
-// =============================
 const roadmapRoutePath = path.join(__dirname, "routes", "roadmap.js");
 
 if (fs.existsSync(roadmapRoutePath)) {
@@ -67,16 +53,11 @@ if (fs.existsSync(roadmapRoutePath)) {
   console.warn("⚠ roadmap.js file missing");
 }
 
-// -----------------------------
-// Health Check
-// -----------------------------
 app.get("/", (req, res) => {
   res.send("Backend Running Successfully!");
 });
 
-// =============================
 // QUIZ GENERATE (Gemini API)
-// =============================
 app.post("/api/generate-quiz", async (req, res) => {
   const { topic } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
@@ -138,9 +119,7 @@ Exactly 10 questions.`;
   return res.status(500).json({ error: "Quiz generation failed" });
 });
 
-// =============================
 // QUIZ EVALUATE
-// =============================
 app.post("/api/evaluate-quiz", (req, res) => {
   const { quizData, userAnswers } = req.body;
 
@@ -169,9 +148,7 @@ app.post("/api/evaluate-quiz", (req, res) => {
   res.json({ score, total: quizData.questions.length, feedback });
 });
 
-// =============================
 // QUIZ MOCK
-// =============================
 app.post("/api/generate-quiz-mock", (req, res) => {
   res.json({
     questions: Array.from({ length: 10 }).map((_, i) => ({
@@ -183,17 +160,11 @@ app.post("/api/generate-quiz-mock", (req, res) => {
   });
 });
 
-// =============================
-// MongoDB Connect
-// =============================
 mongoose
   .connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/student_predict")
   .then(() => console.log("✓ MongoDB Connected"))
   .catch(err => console.error("❌ MongoDB Error:", err));
 
-// =============================
-// Start Server
-// =============================
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
