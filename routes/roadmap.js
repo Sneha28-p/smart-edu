@@ -9,11 +9,9 @@ router.post("/", async (req, res) => {
   const { topic } = req.body;
 
   try {
-    // Escape regex special characters
     const escapeRegex = (text) =>
       text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-    // 1️⃣ Try direct DB match first (case-insensitive)
     const data = await Roadmap.findOne({
       topic: { $regex: new RegExp(escapeRegex(topic), "i") },
     });
@@ -22,7 +20,6 @@ router.post("/", async (req, res) => {
       return res.json({ source: "db", roadmap: data.steps });
     }
 
-    // 2️⃣ If not found → call Python ML script
     const pythonProcess = spawn("python", ["backend/ml/predict.py", topic]);
 
     let predicted = "";
@@ -34,7 +31,6 @@ router.post("/", async (req, res) => {
     pythonProcess.on("close", async () => {
       predicted = predicted.trim();
 
-      // ML model found nothing
       if (predicted === "NO_MATCH" || !predicted) {
         return res.json({
           message: "No roadmap found for this topic.",
@@ -42,7 +38,6 @@ router.post("/", async (req, res) => {
         });
       }
 
-      // Look up predicted topic in DB
       const mlData = await Roadmap.findOne({
         topic: { $regex: new RegExp(predicted, "i") },
       });
