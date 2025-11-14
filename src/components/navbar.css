@@ -1,0 +1,79 @@
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.2rem 4rem;
+  background: white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+.logo {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #1e3a8a;
+}
+
+.hub-badge {
+  background-color: #07728b;
+  color: #fff;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  margin-left: 3px;
+  font-weight: 700;
+}
+
+
+
+/* Navigation links */
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 2rem;
+  margin: 0;
+  padding: 0;
+}
+
+/* Each nav item */
+.nav-links li {
+  position: relative;
+}
+
+/* Link style */
+.nav-links a {
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 1rem;
+  color: #07728b;
+  transition: color 0.3s ease, transform 0.3s ease;
+  padding: 5px 0;
+}
+
+/* Add a cool underline slide effect */
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 0%;
+  height: 2px;
+  background: linear-gradient(90deg, #07728b, #07728b);
+  transition: width 0.3s ease;
+  border-radius: 2px;
+}
+
+/* Hover effects */
+.nav-links a:hover {
+  color: #07728b;
+  transform: translateY(-2px);
+}
+
+.nav-links a:hover::after {
+  width: 100%;
+}
+a.logo-link{
+  color:#07728b;
+}

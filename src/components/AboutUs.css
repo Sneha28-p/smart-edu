@@ -1,0 +1,233 @@
+/* Header Section */
+.about-header {
+    background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),url("../assets/langing.jpg");
+    background-position: center;
+    height: 60px;
+    background-size: cover;
+    color: white;
+    padding: 80px 20px;
+    align-items: center;
+    text-align: center;
+    display: flex;
+}
+
+.about-header h1 {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.tagline {
+  font-size: 1.3rem;
+  opacity: 0.95;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Content Wrapper */
+.content-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 10px;
+}
+
+/* Common Section Styles */
+section {
+  padding: 80px 20px;
+}
+
+section h2 {
+  font-size: 2.5rem;
+  color: #07728b;
+  margin-bottom: 30px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Mission Section */
+.mission-section {
+  background: white;
+}
+
+.mission-section p {
+  font-size: 1.2rem;
+  line-height: 1.8;
+  color: #333;
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* Story Section */
+.story-section {
+  background: white;
+}
+
+.story-section p {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  color: #333;
+  margin-bottom: 20px;
+  max-width: 900px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Values Section */
+.values-section {
+  background: linear-gradient(135deg, #07728b 0%, #0a7d94 100%);
+  color: white;
+}
+
+.values-section h2 {
+  color: white;
+}
+
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+  margin-top: 50px;
+}
+
+.value-item {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 30px;
+  border-radius: 12px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: background 0.3s ease;
+}
+
+.value-item:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.value-item h4 {
+  font-size: 1.4rem;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.value-item p {
+  font-size: 1rem;
+  line-height: 1.6;
+  opacity: 0.9;
+}
+
+/* Contact Section */
+.contact-section {
+  background: white;
+}
+
+.contact-intro {
+  font-size: 1.1rem;
+  color: #555;
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto 60px;
+}
+
+.contact-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.contact-item {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.contact-icon {
+  font-size: 2.5rem;
+  min-width: 50px;
+}
+
+.contact-item h4 {
+  font-size: 1.3rem;
+  color: #07728b;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.contact-item a {
+  display: block;
+  color: #333;
+  text-decoration: none;
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+  transition: color 0.3s ease;
+}
+
+.contact-item a:hover {
+  color: #07728b;
+}
+
+.contact-item p {
+  color: #666;
+  margin: 5px 0;
+  font-size: 1rem;
+}
+
+.contact-hours {
+  font-style: italic;
+  color: #888;
+  font-size: 0.95rem !important;
+}
+
+.social-links {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.social-link {
+  padding: 8px 16px;
+  background: #07728b;
+  color: white !important;
+  border-radius: 20px;
+  font-size: 0.95rem !important;
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.social-link:hover {
+  background: #0a91ad;
+  transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .about-header h1 {
+    font-size: 2.5rem;
+  }
+
+  .tagline {
+    font-size: 1.1rem;
+  }
+
+  section {
+    padding: 60px 20px;
+  }
+
+  section h2 {
+    font-size: 2rem;
+  }
+
+  .values-grid,
+  .contact-info {
+    grid-template-columns: 1fr;
+  }
+
+  .social-links {
+    justify-content: flex-start;
+  }
+  
+  .feature-item p {
+    text-align: left;
+  }
+}
