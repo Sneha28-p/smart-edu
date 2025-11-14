@@ -143,8 +143,8 @@ const styles = {
     borderRadius: "12px",
     border: "1px solid #d0d7de",
     fontSize: "1.3rem",
-    color: "#1e293b",            // dark gray text
-    backgroundColor: "#ffffff",   // white background
+    color: "#1e293b",
+    backgroundColor: "#ffffff",
     padding: "0 15px",
     outline: "none",
     transition: "border-color 0.2s ease, box-shadow 0.2s ease",
