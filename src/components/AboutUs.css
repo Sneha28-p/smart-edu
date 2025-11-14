@@ -32,7 +32,6 @@
   padding: 0 10px;
 }
 
-/* Common Section Styles */
 section {
   padding: 80px 20px;
 }
@@ -45,7 +44,6 @@ section h2 {
   font-weight: 600;
 }
 
-/* Mission Section */
 .mission-section {
   background: white;
 }
@@ -59,7 +57,6 @@ section h2 {
   margin: 0 auto;
 }
 
-/* Story Section */
 .story-section {
   background: white;
 }
@@ -74,7 +71,6 @@ section h2 {
   margin-right: auto;
 }
 
-/* Values Section */
 .values-section {
   background: linear-gradient(135deg, #07728b 0%, #0a7d94 100%);
   color: white;
@@ -116,7 +112,6 @@ section h2 {
   opacity: 0.9;
 }
 
-/* Contact Section */
 .contact-section {
   background: white;
 }
