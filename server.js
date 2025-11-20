@@ -26,9 +26,6 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
-// -----------------------------
-// CONFIG: DB path for scores
-// Default to the path you used earlier (mini-project/db.json) — override with SCORES_DB_PATH in .env
 const DEFAULT_DB = path.join(__dirname, "..", "..", "quizgenerator", "quiz-app", "mini-project", "db.json");
 const SCORES_DB_PATH = process.env.SCORES_DB_PATH || DEFAULT_DB;
 function getDBPath() {
@@ -40,15 +37,12 @@ app.get("/api/debug-path", (req, res) => {
   res.send("DB PATH → " + getDBPath());
 });
 
-// -----------------------------
-// Utility helpers
-// -----------------------------
 async function safeReadJSON(filePath) {
   try {
     const data = await fsPromises.readFile(filePath, "utf8");
     return data.trim() ? JSON.parse(data) : {};
   } catch (err) {
-    if (err.code === "ENOENT") return {}; // missing file => empty
+    if (err.code === "ENOENT") return {};
     throw err;
   }
 }
@@ -58,21 +52,16 @@ async function safeWriteJSON(filePath, obj) {
   await fsPromises.writeFile(filePath, JSON.stringify(obj, null, 2), "utf8");
 }
 
-/**
- * POST with retry (exponential backoff) for 429 responses only.
- * Retries up to maxAttempts.
- */
 async function postWithRetry(url, body, headers = {}, maxAttempts = 4) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await axios.post(url, body, { headers });
     } catch (err) {
       const status = err.response?.status;
-      // If not a 429, don't retry
       if (status && status !== 429) throw err;
 
       if (attempt === maxAttempts) throw err;
-      const delay = Math.pow(2, attempt) * 250; // 500ms, 1000ms, 2000ms...
+      const delay = Math.pow(2, attempt) * 250;
       console.warn(`postWithRetry: attempt ${attempt} failed (status ${status}). Retrying in ${delay}ms...`);
       await new Promise((r) => setTimeout(r, delay));
     }
@@ -109,9 +98,6 @@ function tryExtractJSON(text) {
   return null;
 }
 
-// -----------------------------
-// Routes: save/get scores
-// -----------------------------
 app.post("/api/save-score", async (req, res) => {
   const { topic, score, total, timestamp } = req.body;
   if (!topic || typeof score !== "number" || typeof total !== "number") {
@@ -143,9 +129,6 @@ app.get("/api/get-scores", async (req, res) => {
   }
 });
 
-// -----------------------------
-// QUIZ GENERATE (Generative Language / Gemini)
-// -----------------------------
 app.post("/api/generate-quiz", async (req, res) => {
   const { topic } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
@@ -297,9 +280,6 @@ Exactly 10 questions.`;
   return res.status(500).json({ error: "Quiz generation failed — all attempts exhausted" });
 });
 
-// -----------------------------
-// QUIZ EVALUATE
-// -----------------------------
 app.post("/api/evaluate-quiz", (req, res) => {
   const { quizData, userAnswers } = req.body;
 
@@ -340,9 +320,6 @@ app.post("/api/generate-quiz-mock", (req, res) => {
   });
 });
 
-// -----------------------------
-// PREDICTION: read DB and run Python predict.py
-// -----------------------------
 app.get("/api/predict-from-db", (req, res) => {
   const dbPath = getDBPath();
 
@@ -399,7 +376,6 @@ app.get("/api/predict-from-db", (req, res) => {
       const final = output.trim();
       console.log("✅ PYTHON EXIT CODE:", code, "OUTPUT:", final);
 
-      // OPTIONAL: append prediction to db.json under `predictions` (comment out if you don't want)
       try {
         const jsonFile = await safeReadJSON(dbPath);
         if (!Array.isArray(jsonFile.predictions)) jsonFile.predictions = [];
@@ -418,9 +394,6 @@ app.get("/api/predict-from-db", (req, res) => {
   });
 });
 
-// -----------------------------
-// Weak subject
-// -----------------------------
 app.get("/api/weak-subject", (req, res) => {
   const dbPath = getDBPath();
 
@@ -469,9 +442,6 @@ app.get("/api/weak-subject", (req, res) => {
   });
 });
 
-// -----------------------------
-// Optional: dynamic route imports if you have /routes/*.js
-// -----------------------------
 const predictRoutePath = path.join(__dirname, "routes", "predict.js");
 if (fs.existsSync(predictRoutePath)) {
   try {
@@ -500,9 +470,6 @@ if (fs.existsSync(roadmapRoutePath)) {
   }
 }
 
-// -----------------------------
-// MongoDB connect & start server
-// -----------------------------
 mongoose
   .connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/student_predict")
   .then(() => console.log("✓ MongoDB Connected"))

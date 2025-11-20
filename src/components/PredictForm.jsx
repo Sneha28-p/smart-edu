@@ -19,7 +19,6 @@ export default function PredictForm() {
     setScores([]);
 
     try {
-      // 1️⃣ Fetch prediction + all quiz scores from integrated server
       const res = await fetch(`${API_BASE_URL}/api/predict-from-db`);
       if (!res.ok) {
         const text = await res.text().catch(() => "");
@@ -28,16 +27,14 @@ export default function PredictForm() {
       const data = await res.json();
       console.log("Predict-from-db:", data);
 
-      // Safety: ensure all_scores exists and is an array
       if (Array.isArray(data.all_scores) && data.all_scores.length > 0) {
         setScores(data.all_scores);
       } else {
-        setScores([]); // avoid undefined
+        setScores([]);
       }
 
       setPrediction(data.prediction ?? null);
 
-      // 2️⃣ Fetch weakest subject (use /api/ prefix)
       const weak = await fetch(`${API_BASE_URL}/api/weak-subject`);
       if (!weak.ok) {
         const text = await weak.text().catch(() => "");
@@ -65,11 +62,9 @@ export default function PredictForm() {
 
       {error && <p className="error-message">{error}</p>}
 
-      {/* Only show results if scores array exists */}
       {Array.isArray(scores) && scores.length > 0 && (
         <div className="prediction-box">
 
-          {/* ALL SCORES */}
           <h2>All Quiz Scores Used</h2>
           <ul>
             {scores.map((s, i) => (
@@ -79,7 +74,6 @@ export default function PredictForm() {
             ))}
           </ul>
 
-          {/* PREDICTION */}
           <h2>Prediction Result</h2>
           <p>
             {prediction === null|| prediction === undefined || prediction === ""?(
@@ -93,7 +87,6 @@ export default function PredictForm() {
             )}
           </p>
 
-          {/* WEAKEST SUBJECT */}
           {weakSubject && weakSubject.weakSubject && (
             <>
               <h2>Weakest Subject</h2>
@@ -104,7 +97,6 @@ export default function PredictForm() {
         </div>
       )}
 
-      {/* If no scores yet, show a hint */}
       {Array.isArray(scores) && scores.length === 0 && !loading && (
         <p className="muted">No quiz scores found. Take some quizzes or seed <code>db.json</code>.</p>
       )}

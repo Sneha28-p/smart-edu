@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import "./quiz.css";
 
-// Use Vite env when available, otherwise fallback to localhost:5000
 const API_BASE_URL = import.meta?.env?.VITE_API_BASE || "http://localhost:5000";
 
 export default function Quiz() {
@@ -14,17 +13,14 @@ export default function Quiz() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Past scores loaded from backend db.json
   const [pastScores, setPastScores] = useState([]);
   const [loadingScores, setLoadingScores] = useState(true);
 
-  // fetchScores is a reusable function (used on mount and after save)
   const fetchScores = useCallback(async () => {
     try {
       setLoadingScores(true);
       const res = await axios.get(`${API_BASE_URL}/api/get-scores`);
       const data = Array.isArray(res.data) ? res.data : [];
-      // ensure sorted newest-first
       const sorted = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
       setPastScores(sorted);
     } catch (err) {
@@ -36,11 +32,9 @@ export default function Quiz() {
   }, []);
 
   useEffect(() => {
-    // load saved scores on mount
     fetchScores();
   }, [fetchScores]);
 
-  // Generate quiz from backend (Gemini)
   const handleGenerateQuiz = async () => {
     if (!topic.trim()) {
       setError("Please enter a topic.");
@@ -72,7 +66,6 @@ export default function Quiz() {
     }
   };
 
-  // Submit quiz to evaluate, then save score to db and refresh list
   const handleSubmitQuiz = async () => {
     if (!userAnswers || userAnswers.some(answer => answer === null)) {
       setError("Please answer all questions before submitting.");
@@ -83,7 +76,6 @@ export default function Quiz() {
     setError("");
 
     try {
-      // 1) Evaluate quiz (backend returns score & feedback)
       const response = await axios.post(`${API_BASE_URL}/api/evaluate-quiz`, {
         quizData: { questions: quizData },
         userAnswers,
@@ -92,7 +84,6 @@ export default function Quiz() {
       const evalData = response.data;
       setResults(evalData);
 
-      // 2) Save the score to db.json so ML endpoints can use it
       const scoreToSave = {
         topic,
         score: evalData.score,
@@ -108,17 +99,14 @@ export default function Quiz() {
           "Failed to save score to server:",
           saveErr?.response?.data || saveErr.message || saveErr
         );
-        // still continue to show results; saving is non-fatal
       }
 
-      // 3) Refresh the pastScores list from server so UI shows saved entries
       try {
         await fetchScores();
       } catch (refreshErr) {
         console.warn("Could not refresh past scores:", refreshErr);
       }
 
-      // 4) Clear quiz from screen (show results)
       setQuizData(null);
       setUserAnswers(null);
     } catch (err) {
@@ -145,7 +133,6 @@ export default function Quiz() {
     setIsLoading(false);
   };
 
-  // ---- Render helpers ----
   const renderInputScreen = () => (
     <div className="input-container">
       <h1>Smart Quiz Generator</h1>
