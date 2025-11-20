@@ -1,0 +1,123 @@
+/* -----------------------------
+✨ PREDICTION PAGE — CLEAN UI
+------------------------------*/
+
+.PredictForm {
+  max-width: 700px;
+  margin: 40px auto;
+  background: #ffffff;
+  padding: 25px 30px;
+  border-radius: 16px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.1);
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+/* Header */
+.PredictForm h1 {
+  font-size: 32px;
+  margin-bottom: 20px;
+  color: #222;
+  text-align: center;
+}
+
+/* Action Button */
+.PredictForm .btn {
+  background: #197394;
+  color: white;
+  padding: 12px 26px;
+  border: none;
+  border-radius: 8px;
+  font-size: 17px;
+  cursor: pointer;
+  transition: 0.25s;
+  display: block;
+  margin: 0 auto 25px auto;
+}
+
+.PredictForm .btn:hover {
+  background: #2295af;
+}
+
+/* Error Message */
+.error-message {
+  color: red;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* Main Box */
+.prediction-box {
+  margin-top: 25px;
+  padding: 20px 25px;
+  background: #f9fcff;
+  border: 1px solid #d9e7f2;
+  border-radius: 14px;
+}
+
+/* Section Titles */
+.prediction-box h2 {
+  font-size: 24px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+}
+
+/* Score List */
+.prediction-box ul {
+  padding: 0;
+  margin: 0 0 20px 0;
+}
+
+.prediction-box li {
+  list-style: none;
+  padding: 10px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 18px;
+}
+
+.prediction-box li:last-child {
+  border-bottom: none;
+}
+
+/* Prediction Result */
+.prediction-result {
+  font-size: 20px;
+  font-weight: bold;
+  padding: 12px;
+  border-radius: 8px;
+  background: #eefaff;
+  color: #006789;
+  margin-bottom: 20px;
+  border-left: 4px solid #2e96ad;
+}
+
+/* Weakest Subject Section */
+.prediction-box p {
+  font-size: 18px;
+  margin: 6px 0;
+}
+
+/* Muted empty state */
+.muted {
+  text-align: center;
+  font-size: 16px;
+  color: gray;
+  margin-top: 15px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .PredictForm {
+    padding: 20px;
+  }
+
+  .prediction-box h2 {
+    font-size: 20px;
+  }
+
+  .prediction-result {
+    font-size: 18px;
+  }
+}

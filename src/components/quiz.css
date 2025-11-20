@@ -143,4 +143,43 @@
 .feedback-card.correct { border-left-color: #07728b; }
 .feedback-card.incorrect { border-left-color: #ef4444; }
 
+/* Past Scores Section */
+.scores-list {
+  list-style: none;      /* Remove dots */
+  padding: 0;
+  margin-top: 15px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.scores-list li {
+  background: #f9f9f9;
+  padding: 12px 18px;
+  margin: 8px 0;
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  font-size: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.scores-list li:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+}
+
+.scores-topic {
+  font-weight: bold;
+  color: #333;
+}
+
+.scores-details {
+  color: #555;
+  font-size: 0.95rem;
+}
+
+
 html, body { overflow-x: hidden; }

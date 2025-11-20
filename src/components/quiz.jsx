@@ -1,67 +1,155 @@
-// src/components/quiz.jsx
-import React, { useState } from 'react';
-import axios from 'axios';
-import './quiz.css';
+// src/components/Quiz.jsx
+import React, { useState, useEffect, useCallback } from "react";
+import axios from "axios";
+import "./quiz.css";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// Use Vite env when available, otherwise fallback to localhost:5000
+const API_BASE_URL = import.meta?.env?.VITE_API_BASE || "http://localhost:5000";
 
 export default function Quiz() {
-  const [topic, setTopic] = useState('');
+  const [topic, setTopic] = useState("");
   const [quizData, setQuizData] = useState(null);
   const [userAnswers, setUserAnswers] = useState(null);
   const [results, setResults] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
 
-  const handleGenerateQuiz = async () => {
-    if (!topic.trim()) { setError('Please enter a topic.'); return; }
-    setIsLoading(true); setError(''); setQuizData(null); setResults(null);
+  // Past scores loaded from backend db.json
+  const [pastScores, setPastScores] = useState([]);
+  const [loadingScores, setLoadingScores] = useState(true);
+
+  // fetchScores is a reusable function (used on mount and after save)
+  const fetchScores = useCallback(async () => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/generate-quiz`, { topic });
-      const quizArray = response.data?.questions;
-      if (quizArray && quizArray.length > 0) {
-        setQuizData(quizArray);
-        setUserAnswers(new Array(quizArray.length).fill(null));
-      } else {
-        setError('Failed to generate quiz. The data format was incorrect.');
-      }
+      setLoadingScores(true);
+      const res = await axios.get(`${API_BASE_URL}/api/get-scores`);
+      const data = Array.isArray(res.data) ? res.data : [];
+      // ensure sorted newest-first
+      const sorted = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      setPastScores(sorted);
     } catch (err) {
-      console.error('Error generating quiz:', err);
-      const serverError = err.response?.data?.error || 'An error occurred while generating the quiz. Please try again.';
-      setError(serverError);
-    } finally { setIsLoading(false); }
-  };
+      console.error("Failed to load past scores:", err);
+      setPastScores([]);
+    } finally {
+      setLoadingScores(false);
+    }
+  }, []);
 
-  const handleSubmitQuiz = async () => {
-    if (!userAnswers || userAnswers.some(answer => answer === null)) {
-      setError('Please answer all questions before submitting.');
+  useEffect(() => {
+    // load saved scores on mount
+    fetchScores();
+  }, [fetchScores]);
+
+  // Generate quiz from backend (Gemini)
+  const handleGenerateQuiz = async () => {
+    if (!topic.trim()) {
+      setError("Please enter a topic.");
       return;
     }
-    setIsLoading(true); setError('');
+    setError("");
+    setIsLoading(true);
+    setQuizData(null);
+    setResults(null);
+
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/evaluate-quiz`, {
-        quizData: { questions: quizData }, userAnswers,
-      });
-      setResults(response.data);
-      setQuizData(null);
+      const res = await axios.post(`${API_BASE_URL}/api/generate-quiz`, { topic });
+
+      const quizArray = res.data?.questions;
+      if (!quizArray || !Array.isArray(quizArray) || quizArray.length === 0) {
+        setError("Failed to generate quiz. The server returned unexpected data.");
+        setIsLoading(false);
+        return;
+      }
+
+      setQuizData(quizArray);
+      setUserAnswers(new Array(quizArray.length).fill(null));
     } catch (err) {
-      console.error('Error submitting quiz:', err);
-      setError('An error occurred while submitting the quiz. Please try again.');
-    } finally { setIsLoading(false); }
+      console.error("Error generating quiz:", err);
+      const serverMsg = err?.response?.data?.error;
+      setError(serverMsg || "Error generating quiz. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Submit quiz to evaluate, then save score to db and refresh list
+  const handleSubmitQuiz = async () => {
+    if (!userAnswers || userAnswers.some(answer => answer === null)) {
+      setError("Please answer all questions before submitting.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // 1) Evaluate quiz (backend returns score & feedback)
+      const response = await axios.post(`${API_BASE_URL}/api/evaluate-quiz`, {
+        quizData: { questions: quizData },
+        userAnswers,
+      });
+
+      const evalData = response.data;
+      setResults(evalData);
+
+      // 2) Save the score to db.json so ML endpoints can use it
+      const scoreToSave = {
+        topic,
+        score: evalData.score,
+        total: evalData.total,
+        timestamp: new Date().toISOString(),
+      };
+
+      try {
+        await axios.post(`${API_BASE_URL}/api/save-score`, scoreToSave);
+        console.log("Saved score to server db.json:", scoreToSave);
+      } catch (saveErr) {
+        console.warn(
+          "Failed to save score to server:",
+          saveErr?.response?.data || saveErr.message || saveErr
+        );
+        // still continue to show results; saving is non-fatal
+      }
+
+      // 3) Refresh the pastScores list from server so UI shows saved entries
+      try {
+        await fetchScores();
+      } catch (refreshErr) {
+        console.warn("Could not refresh past scores:", refreshErr);
+      }
+
+      // 4) Clear quiz from screen (show results)
+      setQuizData(null);
+      setUserAnswers(null);
+    } catch (err) {
+      console.error("Error submitting quiz:", err);
+      setError("An error occurred while submitting the quiz. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleAnswerSelect = (questionIndex, optionIndex) => {
-    const newAnswers = [...userAnswers]; newAnswers[questionIndex] = optionIndex; setUserAnswers(newAnswers); setError('');
+    const copy = [...userAnswers];
+    copy[questionIndex] = optionIndex;
+    setUserAnswers(copy);
+    setError("");
   };
 
   const resetApp = () => {
-    setTopic(''); setQuizData(null); setUserAnswers(null); setResults(null); setError(''); setIsLoading(false);
+    setTopic("");
+    setQuizData(null);
+    setUserAnswers(null);
+    setResults(null);
+    setError("");
+    setIsLoading(false);
   };
 
+  // ---- Render helpers ----
   const renderInputScreen = () => (
     <div className="input-container">
       <h1>Smart Quiz Generator</h1>
-      <p>Enter any topic to generate a 10-question multiple-choice quiz!</p>
+      <p>Enter a topic to generate a 10-question multiple-choice quiz!</p>
       <input
         type="text"
         value={topic}
@@ -70,32 +158,60 @@ export default function Quiz() {
         disabled={isLoading}
       />
       <button onClick={handleGenerateQuiz} disabled={isLoading || !topic.trim()}>
-        {isLoading ? 'Generating...' : 'Generate 10-Question Quiz'}
+        {isLoading ? "Generating..." : "Generate Quiz"}
       </button>
       {error && <p className="error-message">{error}</p>}
+
+      <hr className="divider" />
+
+      <h2>Past Quiz Scores</h2>
+      {loadingScores ? (
+        <p>Loading scores…</p>
+      ) : pastScores.length === 0 ? (
+        <p>No saved quiz scores yet.</p>
+      ) : (
+        <ul className="scores-list">
+          {pastScores.map((s, i) => (
+            <li key={i}>
+              <strong>{s.topic}</strong> — {s.score}/{s.total} • {new Date(s.timestamp).toLocaleString()}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 
   const renderQuizScreen = () => (
     <div className="quiz-container">
       <h2>Quiz on: {topic}</h2>
-      {quizData.map((question, qIndex) => (
-        <div key={qIndex} className="question-card">
-          <h3>{qIndex + 1}. {question.question}</h3>
+      {quizData.map((q, qi) => (
+        <div key={qi} className="question-card">
+          <h3>
+            {qi + 1}. {q.question}
+          </h3>
           <div className="options-container">
-            {question.options.map((option, oIndex) => (
-              <label key={oIndex} className={`option-label ${userAnswers[qIndex] === oIndex ? 'selected' : ''}`}>
-                <input type="radio" name={`question-${qIndex}`} checked={userAnswers[qIndex] === oIndex}
-                       onChange={() => handleAnswerSelect(qIndex, oIndex)} disabled={isLoading} />
-                {option}
+            {q.options.map((opt, oi) => (
+              <label key={oi} className={`option-label ${userAnswers[qi] === oi ? "selected" : ""}`}>
+                <input
+                  type="radio"
+                  name={`question-${qi}`}
+                  checked={userAnswers[qi] === oi}
+                  onChange={() => handleAnswerSelect(qi, oi)}
+                />
+                {opt}
               </label>
             ))}
           </div>
         </div>
       ))}
-      <button onClick={handleSubmitQuiz} disabled={isLoading || !userAnswers || userAnswers.some(a => a === null)}>
-        {isLoading ? 'Submitting...' : 'Submit Quiz'}
+
+      <button
+        onClick={handleSubmitQuiz}
+        disabled={isLoading || !userAnswers || userAnswers.some((a) => a === null)}
+      >
+        {isLoading ? "Submitting..." : "Submit Quiz"}
       </button>
+
       {error && <p className="error-message">{error}</p>}
     </div>
   );
@@ -103,36 +219,39 @@ export default function Quiz() {
   const renderResultsScreen = () => (
     <div className="results-container">
       <h2>Quiz Results</h2>
-      <h3 className="score">Your Score: {results.score} / {results.total}</h3>
+      <h3 className="score">
+        Your Score: {results.score} / {results.total}
+      </h3>
+
       <div className="feedback-list">
-        {results.feedback.map((item, index) => (
-          <div key={index} className={`feedback-card ${item.isCorrect ? 'correct' : 'incorrect'}`}>
-            <h4>{index + 1}. {item.question}</h4>
-            <p>Your answer: {item.userAnswer}</p>
-            {!item.isCorrect && <p className="correct-answer">Correct answer: {item.correctAnswer}</p>}
-            <p className="explanation"><strong>Explanation:</strong> {item.explanation}</p>
+        {results.feedback.map((fb, idx) => (
+          <div key={idx} className={`feedback-card ${fb.isCorrect ? "correct" : "incorrect"}`}>
+            <h4>
+              {idx + 1}. {fb.question}
+            </h4>
+            <p>Your answer: {fb.userAnswer}</p>
+            {!fb.isCorrect && <p className="correct-answer">Correct: {fb.correctAnswer}</p>}
+            <p className="explanation">
+              <strong>Explanation:</strong> {fb.explanation}
+            </p>
           </div>
         ))}
       </div>
+
       <button onClick={resetApp}>Generate Another Quiz</button>
     </div>
   );
 
   return (
-    <div className="quiz-page" id="quiz-page-debug">
-      <div className="App">
-        <div className="app-container">
-          {isLoading && !results && (
-            <div className="loading-container">
-              <h2>Generating quiz for "{topic}"...</h2>
-              <p>(This may take a moment)</p>
-            </div>
-          )}
+    <div className="App">
+      <div className="app-container">
+        {isLoading && !results && <div className="loading-container">Working…</div>}
 
-          {!isLoading && results && renderResultsScreen()}
-          {!isLoading && !results && quizData && renderQuizScreen()}
-          {!isLoading && !results && !quizData && renderInputScreen()}
-        </div>
+        {!isLoading && results && renderResultsScreen()}
+
+        {!isLoading && !results && quizData && renderQuizScreen()}
+
+        {!isLoading && !results && !quizData && renderInputScreen()}
       </div>
     </div>
   );
