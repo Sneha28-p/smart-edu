@@ -101,7 +101,7 @@ GEMINI_API_KEY=your_google_api_key
 SCORES_DB_PATH=./db.json
 ```
 
-##Start backend
+## Start backend
 
 ```
 npm start
