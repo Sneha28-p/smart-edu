@@ -13,6 +13,7 @@ function sigmoid(z) {
   return 1 / (1 + Math.exp(-z));
 }
 
+
 export function predict(input) {
   const order = model.feature_order || ["quiz_marks", "attendance", "study_hours"];
   const x = order.map((k) => Number(input[k] || 0));

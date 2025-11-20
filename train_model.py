@@ -8,8 +8,7 @@ import numpy as np
 # Load CSV
 data = pd.read_csv("student_data.csv")
 
-# Group by subject type (python, java, c, c++, etc.)
-# Each subject contains several quiz attempts
+
 groups = data.groupby("subject")
 
 rows = []
