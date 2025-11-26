@@ -118,15 +118,15 @@ Ensure files exist:
  predict.py
  student_model.pkl
 
+ ### Install bcrypto 
+ ```
+   npm install bcrypto
+ ```
+
 ### 4️⃣ Frontend Setup
 ```
 npm install
 npm run dev
-```
-### install bcrypto
-```
-npm install bcrypto
-
 ```
 ## API Endpoints
 Quiz
