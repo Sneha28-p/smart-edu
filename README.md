@@ -88,7 +88,7 @@ cd smart-edu
 
 ---
 
-## 2️⃣ Backend Setup
+### 2️⃣ Backend Setup
 ```
 npm install
 ```
@@ -110,7 +110,7 @@ node server.js
 
 ```
 
-## 3️⃣ Python ML Setup
+### 3️⃣ Python ML Setup
 ```
 pip install joblib scikit-learn numpy
 ```
@@ -118,12 +118,16 @@ Ensure files exist:
  predict.py
  student_model.pkl
 
-4️⃣ Frontend Setup
+### 4️⃣ Frontend Setup
 ```
 npm install
 npm run dev
 ```
+### install bcrypto
+```
+npm install bcrypto
 
+```
 ## API Endpoints
 Quiz
 
