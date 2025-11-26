@@ -50,7 +50,7 @@ export default function Roadmap() {
           />
 
           <button onClick={handleSearch} disabled={loading}>
-            {loading ? "Loading..." : "Generate Roadmap"}
+            {loading ? "Loading..." : "Get Roadmap"}
           </button>
         </div>
       </div>

@@ -1,142 +1,106 @@
 # predict.py
+# Called from server.js with:
+#   python predict.py "<json-string>"
+#
+# The JSON looks like:
+# [
+#   {"subject": "python", "percent": 50.0},
+#   {"subject": "c++", "percent": 40.0},
+#   ...
+# ]
+#
+# This script prints a HUMAN-READABLE prediction string:
+#   - strongest subject
+#   - weakest subject
+#   - short career path suggestion
 
-import sys
 import json
-import os
-import traceback
-
-try:
-    import joblib
-except Exception:
-    joblib = None
-
-def safe_print_prediction(val):
-    s = "1" if val else "0"
-    sys.stdout.write(s)
-    sys.stdout.flush()
-
-def load_input():
-    if len(sys.argv) > 1:
-        raw = sys.argv[1]
-    else:
-        raw = sys.stdin.read()
-    try:
-        data = json.loads(raw)
-        if isinstance(data, dict) and "all_scores" in data:
-            data = data["all_scores"]
-        if not isinstance(data, list):
-            raise ValueError("Input JSON is not a list")
-        return data
-    except Exception as e:
-        sys.stderr.write("Failed to parse input JSON: " + str(e) + "\n")
-        sys.stderr.write("Raw input was: " + (raw[:1000] if isinstance(raw, str) else str(raw)) + "\n")
-        return None
-
-def heuristic_predict(all_scores):
-    """
-    Simple fallback heuristic:
-      - compute average percent
-      - if avg >= 50 => PASS (1)
-      - else => FAIL (0)
-    This is safe and deterministic.
-    """
-    try:
-        if not all_scores or len(all_scores) == 0:
-            return 0
-        percents = []
-        for item in all_scores:
-            p = None
-            if isinstance(item, dict):
-                p = item.get("percent") or item.get("percent_score") or item.get("pct")
-            else:
-                p = item
-            try:
-                p = float(p)
-            except Exception:
-                p = None
-            if p is not None:
-                percents.append(p)
-        if len(percents) == 0:
-            return 0
-        avg = sum(percents) / len(percents)
-        return 1 if avg >= 50.0 else 0
-    except Exception as e:
-        sys.stderr.write("Heuristic predict error: " + str(e) + "\n")
-        return 0
-
-def model_predict(all_scores, model_path):
-    """
-    Load a joblib model and call predict. The model must accept a vector representation.
-    This example expects the model to accept a list of percents or other features.
-    You may need to adapt to your trained model's expected feature vector.
-    """
-    if joblib is None:
-        raise RuntimeError("joblib is not installed")
-
-    if not os.path.exists(model_path):
-        raise FileNotFoundError(f"Model file not found at {model_path}")
-
-    model = joblib.load(model_path)
-
-    percents = []
-    for item in all_scores:
-        try:
-            p = float(item.get("percent") if isinstance(item, dict) else float(item))
-            percents.append(p)
-        except Exception:
-            continue
-
-    if len(percents) == 0:
-        raise ValueError("No percent values to build features")
-
-    features = [[sum(percents)/len(percents), max(percents), min(percents)]]
-
-    pred = model.predict(features)
-    try:
-        p = int(pred[0])
-        return 1 if p == 1 else 0
-    except Exception:
-        try:
-            p0 = float(pred[0])
-            return 1 if p0 >= 0.5 else 0
-        except Exception:
-            raise
+import sys
 
 def main():
-    all_scores = load_input()
-    if all_scores is None:
-        safe_print_prediction(0)
-        return
+  # If no argument passed, print generic message
+  if len(sys.argv) < 2:
+    print("Not enough score data to make a prediction yet. Try taking a few quizzes first.")
+    return
 
-    model_path = os.environ.get("MODEL_PATH") or "student_model.pkl"
+  try:
+    scores = json.loads(sys.argv[1])
+  except Exception:
+    print("Could not read your scores. Please try again after some more quizzes.")
+    return
 
-    try:
-        if os.path.exists(model_path) and joblib is not None:
-            try:
-                result = model_predict(all_scores, model_path)
-                safe_print_prediction(result)
-                return
-            except Exception as e:
-                sys.stderr.write("Model prediction failed: " + str(e) + "\n")
-                traceback.print_exc(file=sys.stderr)
-        else:
-            if not os.path.exists(model_path):
-                sys.stderr.write(f"Model file not found at {model_path} - falling back to heuristic\n")
-            elif joblib is None:
-                sys.stderr.write("joblib not available - falling back to heuristic\n")
-    except Exception as e:
-        sys.stderr.write("Unexpected error when trying model: " + str(e) + "\n")
-        traceback.print_exc(file=sys.stderr)
+  if not scores:
+    print("No quiz scores found yet. Take a few quizzes to get a personalized prediction.")
+    return
 
-    try:
-        result = heuristic_predict(all_scores)
-        safe_print_prediction(result)
-        return
-    except Exception as e:
-        sys.stderr.write("Heuristic failed: " + str(e) + "\n")
-        traceback.print_exc(file=sys.stderr)
-        safe_print_prediction(0)
-        return
+  # Ensure each item has subject & percent
+  valid_scores = [
+    s for s in scores
+    if isinstance(s, dict) and "subject" in s and "percent" in s
+  ]
+  if not valid_scores:
+    print("Your scores are not in the right format for prediction.")
+    return
+
+  # Find strongest & weakest subject
+  strongest = max(valid_scores, key=lambda x: x["percent"])
+  weakest  = min(valid_scores, key=lambda x: x["percent"])
+
+  strong_subj = str(strongest["subject"]).lower()
+  weak_subj   = str(weakest["subject"]).lower()
+  strong_pct  = round(float(strongest["percent"]), 1)
+  weak_pct    = round(float(weakest["percent"]), 1)
+
+  # -----------------------------
+  # Career suggestion based on strongest subject
+  # -----------------------------
+  suggestion = ""
+
+  # Normalize for simple keyword checks
+  s = strong_subj.replace(" ", "")
+
+  if any(k in s for k in ["python", "ml", "machinelearning", "ai", "data"]):
+    suggestion = (
+      "You have good potential for Data Science / Machine Learning or AI-related roles. "
+      "Consider exploring projects in data analysis, ML models, or AI applications."
+    )
+  elif any(k in s for k in ["c++", "cpp", "cp", "dsa", "datastructures", "algorithms"]):
+    suggestion = (
+      "Your strengths are suited for Software Development and competitive programming. "
+      "You could focus on roles like Software Engineer, Systems Programmer, or Game Developer."
+    )
+  elif any(k in s for k in ["java", "oop"]):
+    suggestion = (
+      "You have a solid base for backend or enterprise development. "
+      "Careers in Java backend, Android development, or large-scale enterprise systems may fit you well."
+    )
+  elif any(k in s for k in ["dbms", "database", "sql"]):
+    suggestion = (
+      "You show strength in database concepts. "
+      "You might enjoy roles like Backend Developer, Database Administrator, or Data Engineer."
+    )
+  elif any(k in s for k in ["network", "cn", "computerNetworks", "os", "operatingsystem"]):
+    suggestion = (
+      "You have a good base in low-level and network concepts. "
+      "Consider exploring careers in Networking, DevOps, Cloud, or Cybersecurity."
+    )
+  else:
+    suggestion = (
+      "You have a clear strength in this subject. "
+      "Try building small projects and exploring internships or courses in areas related to your strongest subject."
+    )
+
+  # -----------------------------
+  # Final message combining D + A
+  # -----------------------------
+  message = (
+    f"Strongest subject: {strong_subj} ({strong_pct}%). "
+    f"Weakest subject: {weak_subj} ({weak_pct}%). "
+    f"{suggestion}"
+  )
+
+  print(message)
+
 
 if __name__ == "__main__":
-    main()
+  main()

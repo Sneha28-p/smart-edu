@@ -1,6 +1,4 @@
 // server.js (ESM)
-// Place at your backend root. Requires "type": "module" in package.json
-
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -13,6 +11,8 @@ import fsPromises from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
+import authRoutes from "./routes/auth.js";
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,8 +25,17 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
+app.use("/api",authRoutes);
 
-const DEFAULT_DB = path.join(__dirname, "..", "..", "quizgenerator", "quiz-app", "mini-project", "db.json");
+const DEFAULT_DB = path.join(
+  __dirname,
+  "..",
+  "..",
+  "quizgenerator",
+  "quiz-app",
+  "mini-project",
+  "db.json"
+);
 const SCORES_DB_PATH = process.env.SCORES_DB_PATH || DEFAULT_DB;
 function getDBPath() {
   return SCORES_DB_PATH;
@@ -62,7 +71,9 @@ async function postWithRetry(url, body, headers = {}, maxAttempts = 4) {
 
       if (attempt === maxAttempts) throw err;
       const delay = Math.pow(2, attempt) * 250;
-      console.warn(`postWithRetry: attempt ${attempt} failed (status ${status}). Retrying in ${delay}ms...`);
+      console.warn(
+        `postWithRetry: attempt ${attempt} failed (status ${status}). Retrying in ${delay}ms...`
+      );
       await new Promise((r) => setTimeout(r, delay));
     }
   }
@@ -70,11 +81,18 @@ async function postWithRetry(url, body, headers = {}, maxAttempts = 4) {
 
 async function listAvailableModels(apiKey) {
   try {
-    const resp = await axios.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const resp = await axios.get(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`
+    );
     const models = resp.data?.models || [];
-    return models.map((m) => (typeof m === "string" ? m : m.name || m.id || JSON.stringify(m)));
+    return models.map((m) =>
+      typeof m === "string" ? m : m.name || m.id || JSON.stringify(m)
+    );
   } catch (err) {
-    console.warn("listAvailableModels failed:", err?.response?.data || err.message || err);
+    console.warn(
+      "listAvailableModels failed:",
+      err?.response?.data || err.message || err
+    );
     return [];
   }
 }
@@ -98,10 +116,16 @@ function tryExtractJSON(text) {
   return null;
 }
 
+
+// SAVE SCORE
 app.post("/api/save-score", async (req, res) => {
-  const { topic, score, total, timestamp } = req.body;
+  const { topic, score, total, timestamp, userEmail, userName } = req.body;
+
   if (!topic || typeof score !== "number" || typeof total !== "number") {
-    return res.status(400).json({ error: "Invalid payload. Required: topic (string), score (number), total (number)" });
+    return res.status(400).json({
+      error:
+        "Invalid payload. Required: topic (string), score (number), total (number)",
+    });
   }
 
   const dbPath = getDBPath();
@@ -109,30 +133,55 @@ app.post("/api/save-score", async (req, res) => {
   try {
     const json = await safeReadJSON(dbPath);
     if (!Array.isArray(json.scores)) json.scores = [];
-    json.scores.push({ topic, score, total, timestamp: timestamp || new Date().toISOString() });
+
+    json.scores.push({
+      topic,
+      score,
+      total,
+      timestamp: timestamp || new Date().toISOString(),
+      userEmail: userEmail || null,
+      userName: userName || null,
+    });
+
     await safeWriteJSON(dbPath, json);
-    return res.status(200).json({ ok: true, saved: { topic, score, total } });
+    return res
+      .status(200)
+      .json({ ok: true, saved: { topic, score, total, userEmail, userName } });
   } catch (err) {
     console.error("Error saving score:", err);
-    return res.status(500).json({ error: "Could not save score", details: err?.message || String(err) });
+    return res.status(500).json({
+      error: "Could not save score",
+      details: err?.message || String(err),
+    });
   }
 });
 
 app.get("/api/get-scores", async (req, res) => {
   const dbPath = getDBPath();
+  const { userEmail } = req.query;
+
   try {
     const json = await safeReadJSON(dbPath);
-    return res.json(json.scores || []);
+    const allScores = Array.isArray(json.scores) ? json.scores : [];
+
+    const filtered = userEmail
+      ? allScores.filter((s) => s.userEmail === userEmail)
+      : allScores;
+
+    return res.json(filtered);
   } catch (err) {
     console.error("Error reading scores:", err);
     return res.status(500).json({ error: "Could not read scores file" });
   }
 });
 
+
 app.post("/api/generate-quiz", async (req, res) => {
   const { topic } = req.body;
   const apiKey = process.env.GEMINI_API_KEY;
-  const useMock = process.env.USE_QUIZ_MOCK === "1" || process.env.NODE_ENV === "development";
+  const useMock =
+    process.env.USE_QUIZ_MOCK === "1" ||
+    process.env.NODE_ENV === "development";
 
   if (!topic) return res.status(400).json({ error: "Topic is required" });
 
@@ -143,8 +192,8 @@ app.post("/api/generate-quiz", async (req, res) => {
           question: `Sample question ${i + 1} about ${topic}?`,
           options: ["A", "B", "C", "D"],
           correctIndex: 0,
-          explanation: "Sample explanation"
-        }))
+          explanation: "Sample explanation",
+        })),
       });
     }
     return res.status(500).json({ error: "Missing GEMINI_API_KEY" });
@@ -156,7 +205,7 @@ app.post("/api/generate-quiz", async (req, res) => {
     "models/gemini-2.5-flash",
     "models/gemini-2.5-pro",
     "models/gemini-2.0-flash",
-    "models/gemini-2.0-pro-exp"
+    "models/gemini-2.0-pro-exp",
   ];
 
   const available = await listAvailableModels(apiKey);
@@ -164,7 +213,11 @@ app.post("/api/generate-quiz", async (req, res) => {
 
   let candidates = preferredModels.filter((p) => available.includes(p));
   if (candidates.length === 0) {
-    const filtered = available.filter((m) => (m.includes("flash") || m.includes("pro")) && !/(exp|preview|experimental)/i.test(m));
+    const filtered = available.filter(
+      (m) =>
+        (m.includes("flash") || m.includes("pro")) &&
+        !/(exp|preview|experimental)/i.test(m)
+    );
     candidates = filtered.length ? filtered : available.slice();
   }
 
@@ -176,11 +229,13 @@ app.post("/api/generate-quiz", async (req, res) => {
           question: `Sample question ${i + 1} about ${topic}?`,
           options: ["A", "B", "C", "D"],
           correctIndex: 0,
-          explanation: "Sample explanation"
-        }))
+          explanation: "Sample explanation",
+        })),
       });
     }
-    return res.status(500).json({ error: "No available models for this API key" });
+    return res
+      .status(500)
+      .json({ error: "No available models for this API key" });
   }
 
   console.log("Model candidates (ordered):", candidates);
@@ -199,86 +254,143 @@ Exactly 10 questions.`;
     () => ({
       systemInstruction: { role: "system", parts: [{ text: systemText }] },
       contents: [{ role: "user", parts: [{ text: userText }] }],
-      generationConfig: { responseMimeType: "application/json" }
+      generationConfig: { responseMimeType: "application/json" },
     }),
     () => ({
       system_instruction: { role: "system", parts: [{ text: systemText }] },
       contents: [{ role: "user", parts: [{ text: userText }] }],
-      generationConfig: { responseMimeType: "application/json" }
+      generationConfig: { responseMimeType: "application/json" },
     }),
     () => ({
-      contents: [{ role: "user", parts: [{ text: `${systemText}\n\n${userText}` }] }],
-      generationConfig: { responseMimeType: "application/json" }
-    })
+      contents: [
+        { role: "user", parts: [{ text: `${systemText}\n\n${userText}` }] },
+      ],
+      generationConfig: { responseMimeType: "application/json" },
+    }),
   ];
 
   for (const model of candidates) {
     const modelId = model.includes("/") ? model.split("/").pop() : model;
     const baseUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent`;
-    console.log("Trying model:", model, "using modelId:", modelId, "url:", baseUrl);
+    console.log(
+      "Trying model:",
+      model,
+      "using modelId:",
+      modelId,
+      "url:",
+      baseUrl
+    );
 
     for (let i = 0; i < payloads.length; i++) {
       try {
-        const resp = await postWithRetry(baseUrl, payloads[i](), {
-          "Content-Type": "application/json",
-          "x-goog-api-key": apiKey
-        }, 4);
+        const resp = await postWithRetry(
+          baseUrl,
+          payloads[i](),
+          {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey,
+          },
+          4
+        );
 
-        const text = resp?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const text =
+          resp?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
         if (!text) {
           console.warn("No text in response for", modelId, "payload", i);
           continue;
         }
 
         const parsed = tryExtractJSON(text);
-        if (parsed?.questions && Array.isArray(parsed.questions) && parsed.questions.length === 10) {
+        if (
+          parsed?.questions &&
+          Array.isArray(parsed.questions) &&
+          parsed.questions.length === 10
+        ) {
           console.log("Successfully generated with model:", modelId);
           return res.json(parsed);
         } else {
-          console.warn("Model", modelId, "returned JSON but no valid questions length=10 on payload", i);
+          console.warn(
+            "Model",
+            modelId,
+            "returned JSON but no valid questions length=10 on payload",
+            i
+          );
         }
       } catch (err) {
         const status = err?.response?.status;
-        console.warn(`Quiz generation attempt failed for model ${modelId} payload ${i}:`, status || err?.message || err);
-        if (err?.response?.data) console.warn("API response body:", JSON.stringify(err.response.data));
+        console.warn(
+          `Quiz generation attempt failed for model ${modelId} payload ${i}:`,
+          status || err?.message || err
+        );
+        if (err?.response?.data)
+          console.warn(
+            "API response body:",
+            JSON.stringify(err.response.data)
+          );
 
         if (status === 404) {
-          console.warn(`Model ${modelId} returned 404; trying next candidate.`);
-          break; // try next model
+          console.warn(
+            `Model ${modelId} returned 404; trying next candidate.`
+          );
+          break;
         }
 
         if (status === 400) {
           try {
             const altUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
-            console.log("Trying alternate URL with ?key= for model:", modelId);
-            const resp2 = await axios.post(altUrl, payloads[i](), { headers: { "Content-Type": "application/json" } });
-            const text2 = resp2?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            console.log(
+              "Trying alternate URL with ?key= for model:",
+              modelId
+            );
+            const resp2 = await axios.post(altUrl, payloads[i](), {
+              headers: { "Content-Type": "application/json" },
+            });
+            const text2 =
+              resp2?.data?.candidates?.[0]?.content?.parts?.[0]?.text;
             const parsed2 = tryExtractJSON(text2);
-            if (parsed2?.questions && Array.isArray(parsed2.questions) && parsed2.questions.length === 10) {
-              console.log("Successfully generated with model (alternate key param):", modelId);
+            if (
+              parsed2?.questions &&
+              Array.isArray(parsed2.questions) &&
+              parsed2.questions.length === 10
+            ) {
+              console.log(
+                "Successfully generated with model (alternate key param):",
+                modelId
+              );
               return res.json(parsed2);
             }
           } catch (err2) {
-            console.warn("Alternate ?key attempt also failed for model", modelId, ":", err2?.response?.data || err2?.message || err2);
+            console.warn(
+              "Alternate ?key attempt also failed for model",
+              modelId,
+              ":",
+              err2?.response?.data || err2?.message || err2
+            );
           }
         }
       }
     }
   }
 
-  if (process.env.USE_QUIZ_MOCK === "1" || process.env.NODE_ENV === "development") {
+  if (
+    process.env.USE_QUIZ_MOCK === "1" ||
+    process.env.NODE_ENV === "development"
+  ) {
     return res.json({
       questions: Array.from({ length: 10 }).map((_, i) => ({
         question: `Sample question ${i + 1} about ${topic}?`,
         options: ["A", "B", "C", "D"],
         correctIndex: 0,
-        explanation: "Sample explanation"
-      }))
+        explanation: "Sample explanation",
+      })),
     });
   }
 
-  return res.status(500).json({ error: "Quiz generation failed — all attempts exhausted" });
+  return res
+    .status(500)
+    .json({ error: "Quiz generation failed — all attempts exhausted" });
 });
+
 
 app.post("/api/evaluate-quiz", (req, res) => {
   const { quizData, userAnswers } = req.body;
@@ -301,7 +413,7 @@ app.post("/api/evaluate-quiz", (req, res) => {
       userAnswer: q.options[userAns],
       correctAnswer: q.options[correct],
       isCorrect,
-      explanation: q.explanation
+      explanation: q.explanation,
     });
   });
 
@@ -315,13 +427,15 @@ app.post("/api/generate-quiz-mock", (req, res) => {
       question: `Sample question ${i + 1}?`,
       options: ["A", "B", "C", "D"],
       correctIndex: 0,
-      explanation: "Sample explanation"
-    }))
+      explanation: "Sample explanation",
+    })),
   });
 });
 
+
 app.get("/api/predict-from-db", (req, res) => {
   const dbPath = getDBPath();
+  const { userEmail } = req.query;
 
   console.log("\n🔥 API HIT: /api/predict-from-db");
   console.log("Reading scores from:", dbPath);
@@ -340,8 +454,13 @@ app.get("/api/predict-from-db", (req, res) => {
       return res.status(500).json({ error: "Invalid JSON in db.json" });
     }
 
-    const scores = json.scores;
-    if (!Array.isArray(scores) || scores.length === 0) {
+    let scores = Array.isArray(json.scores) ? json.scores : [];
+
+    if (userEmail) {
+      scores = scores.filter((s) => s.userEmail === userEmail);
+    }
+
+    if (!scores.length) {
       return res.json({ message: "No quiz scores found" });
     }
 
@@ -355,11 +474,11 @@ app.get("/api/predict-from-db", (req, res) => {
     const pythonScriptPath = path.join(__dirname, "predict.py");
     const pythonCmd = process.env.PYTHON_CMD || "python";
 
-    const python = spawn(pythonCmd, [pythonScriptPath, JSON.stringify(allScores)], {
-      cwd: __dirname,
-      shell: true,
-      windowsHide: false,
-    });
+    const python = spawn(
+      pythonCmd,
+      [pythonScriptPath, JSON.stringify(allScores)],
+      { cwd: __dirname, shell: true, windowsHide: false }
+    );
 
     let output = "";
 
@@ -378,10 +497,14 @@ app.get("/api/predict-from-db", (req, res) => {
 
       try {
         const jsonFile = await safeReadJSON(dbPath);
-        if (!Array.isArray(jsonFile.predictions)) jsonFile.predictions = [];
-        jsonFile.predictions.push({ prediction: final, timestamp: new Date().toISOString() });
+        if (!Array.isArray(jsonFile.predictions))
+          jsonFile.predictions = [];
+        jsonFile.predictions.push({
+          prediction: final,
+          timestamp: new Date().toISOString(),
+          userEmail: userEmail || null,
+        });
         await safeWriteJSON(dbPath, jsonFile);
-        console.log("Appended prediction to db.json");
       } catch (e) {
         console.warn("Could not append prediction to db.json:", e?.message || e);
       }
@@ -394,8 +517,10 @@ app.get("/api/predict-from-db", (req, res) => {
   });
 });
 
+
 app.get("/api/weak-subject", (req, res) => {
   const dbPath = getDBPath();
+  const { userEmail } = req.query;
 
   console.log("\n🔥 API HIT: /api/weak-subject");
 
@@ -413,9 +538,13 @@ app.get("/api/weak-subject", (req, res) => {
       return res.status(500).json({ error: "Invalid JSON in db.json" });
     }
 
-    const scores = json.scores;
+    let scores = Array.isArray(json.scores) ? json.scores : [];
 
-    if (!Array.isArray(scores) || scores.length === 0) {
+    if (userEmail) {
+      scores = scores.filter((s) => s.userEmail === userEmail);
+    }
+
+    if (!scores.length) {
       return res.json({
         weakSubject: null,
         percentage: null,
@@ -452,7 +581,10 @@ if (fs.existsSync(predictRoutePath)) {
       console.log("✓ routes/predict.js loaded");
     }
   } catch (err) {
-    console.warn("Could not import routes/predict.js:", err?.message || err);
+    console.warn(
+      "Could not import routes/predict.js:",
+      err?.message || err
+    );
   }
 }
 
@@ -466,16 +598,20 @@ if (fs.existsSync(roadmapRoutePath)) {
       console.log("✓ routes/roadmap.js loaded");
     }
   } catch (err) {
-    console.warn("Could not import routes/roadmap.js:", err?.message || err);
+    console.warn(
+      "Could not import routes/roadmap.js:",
+      err?.message || err
+    );
   }
 }
 
 mongoose
-  .connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/student_predict")
+  .connect(
+    process.env.MONGO_URI || "mongodb://127.0.0.1:27017/student_predict"
+  )
   .then(() => console.log("✓ MongoDB Connected"))
-  .catch(err => console.error("❌ MongoDB Error:", err));
+  .catch((err) => console.error("❌ MongoDB Error:", err));
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
-

@@ -13,15 +13,15 @@ export default function Quiz() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [pastScores, setPastScores] = useState([]);
-  const [loadingScores, setLoadingScores] = useState(true);
 
   const fetchScores = useCallback(async () => {
     try {
       setLoadingScores(true);
       const res = await axios.get(`${API_BASE_URL}/api/get-scores`);
       const data = Array.isArray(res.data) ? res.data : [];
-      const sorted = data.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      const sorted = data.sort(
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+      );
       setPastScores(sorted);
     } catch (err) {
       console.error("Failed to load past scores:", err);
@@ -46,11 +46,15 @@ export default function Quiz() {
     setResults(null);
 
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/generate-quiz`, { topic });
+      const res = await axios.post(`${API_BASE_URL}/api/generate-quiz`, {
+        topic,
+      });
 
       const quizArray = res.data?.questions;
       if (!quizArray || !Array.isArray(quizArray) || quizArray.length === 0) {
-        setError("Failed to generate quiz. The server returned unexpected data.");
+        setError(
+          "Failed to generate quiz. The server returned unexpected data."
+        );
         setIsLoading(false);
         return;
       }
@@ -67,7 +71,7 @@ export default function Quiz() {
   };
 
   const handleSubmitQuiz = async () => {
-    if (!userAnswers || userAnswers.some(answer => answer === null)) {
+    if (!userAnswers || userAnswers.some((answer) => answer === null)) {
       setError("Please answer all questions before submitting.");
       return;
     }
@@ -76,19 +80,34 @@ export default function Quiz() {
     setError("");
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/evaluate-quiz`, {
-        quizData: { questions: quizData },
-        userAnswers,
-      });
+      const response = await axios.post(
+        `${API_BASE_URL}/api/evaluate-quiz`,
+        {
+          quizData: { questions: quizData },
+          userAnswers,
+        }
+      );
 
       const evalData = response.data;
       setResults(evalData);
+
+      const storedUser=localStorage.getItem("smartEduUser");
+      let user=null;
+      try{
+        if(storedUser){
+          user=JSON.parse(storedUser);
+        }
+      }catch(e){
+        console.warn("Could not parse smartEduUser from localStorage:",e);
+      }
 
       const scoreToSave = {
         topic,
         score: evalData.score,
         total: evalData.total,
         timestamp: new Date().toISOString(),
+        userEmail:user?.email||null,
+        userName:user?.name||null,
       };
 
       try {
@@ -111,7 +130,9 @@ export default function Quiz() {
       setUserAnswers(null);
     } catch (err) {
       console.error("Error submitting quiz:", err);
-      setError("An error occurred while submitting the quiz. Please try again.");
+      setError(
+        "An error occurred while submitting the quiz. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -133,68 +154,79 @@ export default function Quiz() {
     setIsLoading(false);
   };
 
-  const renderInputScreen = () => (
-    <div className="input-container">
-      <h1>Smart Quiz Generator</h1>
-      <p>Enter a topic to generate a 10-question multiple-choice quiz!</p>
-      <input
-        type="text"
-        value={topic}
-        onChange={(e) => setTopic(e.target.value)}
-        placeholder="e.g., Photosynthesis"
-        disabled={isLoading}
-      />
-      <button onClick={handleGenerateQuiz} disabled={isLoading || !topic.trim()}>
-        {isLoading ? "Generating..." : "Generate Quiz"}
-      </button>
-      {error && <p className="error-message">{error}</p>}
+const renderInputScreen = () => (
+  <div className="input-container">
+    <h1>Smart Quiz Generator</h1>
+    <p>Enter a topic to generate a 10-question multiple-choice quiz!</p>
+    <input
+      type="text"
+      value={topic}
+      onChange={(e) => setTopic(e.target.value)}
+      placeholder="e.g., Photosynthesis"
+      disabled={isLoading}
+    />
+    <button onClick={handleGenerateQuiz} disabled={isLoading || !topic.trim()}>
+      {isLoading ? "Generating..." : "Generate Quiz"}
+    </button>
+    {error && <p className="error-message">{error}</p>}
+  </div>
+);
 
-      <hr className="divider" />
-
-      <h2>Past Quiz Scores</h2>
-      {loadingScores ? (
-        <p>Loading scores…</p>
-      ) : pastScores.length === 0 ? (
-        <p>No saved quiz scores yet.</p>
-      ) : (
-        <ul className="scores-list">
-          {pastScores.map((s, i) => (
-            <li key={i}>
-              <strong>{s.topic}</strong> — {s.score}/{s.total} • {new Date(s.timestamp).toLocaleString()}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
 
   const renderQuizScreen = () => (
     <div className="quiz-container">
       <h2>Quiz on: {topic}</h2>
+
+      {console.log("Sample question:", quizData?.[0])}
+
       {quizData.map((q, qi) => (
         <div key={qi} className="question-card">
           <h3>
-            {qi + 1}. {q.question}
+            {qi + 1}.{" "}
+            {q.question && q.question.trim()
+              ? q.question
+              : "Question text missing"}
           </h3>
+
           <div className="options-container">
-            {q.options.map((opt, oi) => (
-              <label key={oi} className={`option-label ${userAnswers[qi] === oi ? "selected" : ""}`}>
-                <input
-                  type="radio"
-                  name={`question-${qi}`}
-                  checked={userAnswers[qi] === oi}
-                  onChange={() => handleAnswerSelect(qi, oi)}
-                />
-                {opt}
-              </label>
-            ))}
+            {Array.isArray(q.options) && q.options.length > 0 ? (
+              q.options.map((opt, oi) => (
+                <label
+                  key={oi}
+                  className={`option-label ${
+                    userAnswers[qi] === oi ? "selected" : ""
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name={`question-${qi}`}
+                    checked={userAnswers[qi] === oi}
+                    onChange={() => handleAnswerSelect(qi, oi)}
+                  />
+
+                  <span className="option-text">
+                    {opt && String(opt).trim()
+                      ? opt
+                      : `Option ${String.fromCharCode(65 + oi)}`}
+                  </span>
+                </label>
+              ))
+            ) : (
+              <p className="error-message">
+                No options available for this question.
+              </p>
+            )}
           </div>
         </div>
       ))}
 
       <button
         onClick={handleSubmitQuiz}
-        disabled={isLoading || !userAnswers || userAnswers.some((a) => a === null)}
+        disabled={
+          isLoading ||
+          !userAnswers ||
+          userAnswers.some((a) => a === null)
+        }
       >
         {isLoading ? "Submitting..." : "Submit Quiz"}
       </button>
@@ -212,12 +244,19 @@ export default function Quiz() {
 
       <div className="feedback-list">
         {results.feedback.map((fb, idx) => (
-          <div key={idx} className={`feedback-card ${fb.isCorrect ? "correct" : "incorrect"}`}>
+          <div
+            key={idx}
+            className={`feedback-card ${
+              fb.isCorrect ? "correct" : "incorrect"
+            }`}
+          >
             <h4>
               {idx + 1}. {fb.question}
             </h4>
             <p>Your answer: {fb.userAnswer}</p>
-            {!fb.isCorrect && <p className="correct-answer">Correct: {fb.correctAnswer}</p>}
+            {!fb.isCorrect && (
+              <p className="correct-answer">Correct: {fb.correctAnswer}</p>
+            )}
             <p className="explanation">
               <strong>Explanation:</strong> {fb.explanation}
             </p>
@@ -232,7 +271,9 @@ export default function Quiz() {
   return (
     <div className="App">
       <div className="app-container">
-        {isLoading && !results && <div className="loading-container">Working…</div>}
+        {isLoading && !results && (
+          <div className="loading-container">Working…</div>
+        )}
 
         {!isLoading && results && renderResultsScreen()}
 

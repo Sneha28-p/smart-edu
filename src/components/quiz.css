@@ -107,6 +107,15 @@
   box-shadow: 0 6px 18px rgba(0,0,0,0.04);
 }
 
+.question-card h3 {
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  line-height: 1.4;
+}
+
+
 .options-container { display: grid; gap: 10px; }
 
 .option-label {
@@ -118,6 +127,24 @@
   cursor: pointer;
   background: #fff;
 }
+
+.option-label {
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  background: #fff;
+  align-items: center;
+}
+
+.option-text {
+  color: #111827;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
 
 .option-label.selected {
   border-color: #07728b;
@@ -143,9 +170,8 @@
 .feedback-card.correct { border-left-color: #07728b; }
 .feedback-card.incorrect { border-left-color: #ef4444; }
 
-/* Past Scores Section */
 .scores-list {
-  list-style: none;      /* Remove dots */
+  list-style: none;
   padding: 0;
   margin-top: 15px;
   max-width: 600px;

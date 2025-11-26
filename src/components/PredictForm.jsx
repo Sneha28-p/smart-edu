@@ -1,105 +1,128 @@
 // src/components/PredictForm.jsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import "./predict.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 export default function PredictForm() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [prediction, setPrediction] = useState(null);
-  const [weakSubject, setWeakSubject] = useState(null);
   const [scores, setScores] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [weakSubject, setWeakSubject] = useState(null);
   const [error, setError] = useState("");
 
-  const getPrediction = async () => {
-    setLoading(true);
-    setError("");
-    setPrediction(null);
-    setWeakSubject(null);
-    setScores([]);
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/predict-from-db`);
-      if (!res.ok) {
-        const text = await res.text().catch(() => "");
-        throw new Error(`Predict request failed: ${res.status} ${text}`);
-      }
-      const data = await res.json();
-      console.log("Predict-from-db:", data);
-
-      if (Array.isArray(data.all_scores) && data.all_scores.length > 0) {
-        setScores(data.all_scores);
-      } else {
-        setScores([]);
-      }
-
-      setPrediction(data.prediction ?? null);
-
-      const weak = await fetch(`${API_BASE_URL}/api/weak-subject`);
-      if (!weak.ok) {
-        const text = await weak.text().catch(() => "");
-        throw new Error(`Weak-subject request failed: ${weak.status} ${text}`);
-      }
-      const weakData = await weak.json();
-      console.log("Weakest subject:", weakData);
-
-      setWeakSubject(weakData);
-    } catch (err) {
-      console.error("Error:", err);
-      setError(err.message || "An error occurred while fetching the prediction.");
-    } finally {
+  useEffect(() => {
+    const stored = localStorage.getItem("smartEduUser");
+    if (!stored) {
+      setUser(null);
+      setError("Please log in to view your insights.");
       setLoading(false);
+      return;
     }
-  };
+
+    const u = JSON.parse(stored);
+    setUser(u);
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const predRes = await axios.get(
+          `${API_BASE_URL}/api/predict-from-db`,
+          { params: { userEmail: u.email } }
+        );
+
+        if (predRes.data.message === "No quiz scores found") {
+          setError("You haven't taken any quizzes yet.");
+          setPrediction(null);
+          setScores([]);
+        } else {
+          setPrediction(predRes.data.prediction || null);
+          setScores(predRes.data.all_scores || []);
+        }
+
+        const weakRes = await axios.get(
+          `${API_BASE_URL}/api/weak-subject`,
+          { params: { userEmail: u.email } }
+        );
+        setWeakSubject(weakRes.data || null);
+      } catch (err) {
+        console.error("Insights fetch error:", err?.response?.data || err);
+        setError("Could not load insights. Try again later.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (!user) {
+    return (
+      <div className="page-wrapper">
+        <div className="profile-card">
+          <h2>Your Insights</h2>
+          <p>{error || "Please log in to view this page."}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="PredictForm">
-      <h1>Student Prediction (Auto from Quiz)</h1>
-
-      <button className="btn" onClick={getPrediction} disabled={loading}>
-        {loading ? "Loading..." : "Get Auto Prediction"}
-      </button>
-
-      {error && <p className="error-message">{error}</p>}
-
-      {Array.isArray(scores) && scores.length > 0 && (
-        <div className="prediction-box">
-
-          <h2>All Quiz Scores Used</h2>
-          <ul>
-            {scores.map((s, i) => (
-              <li key={i}>
-                <b>{s.subject}</b> — {Number(s.percent).toFixed(2)}%
-              </li>
-            ))}
-          </ul>
-
-          <h2>Prediction Result</h2>
-          <p>
-            {prediction === null|| prediction === undefined || prediction === ""?(
-              "-No prediction returned"
-            ):String(prediction).trim()==="1"?(
-              "Student likely to pass"
-            ):String(prediction).trim()==="0"?(
-              "needs improvement"
-            ):(
-              `Result:${String(prediction).trim()}`
-            )}
-          </p>
-
-          {weakSubject && weakSubject.weakSubject && (
-            <>
-              <h2>Weakest Subject</h2>
-              <p><b>Subject:</b> {weakSubject.weakSubject}</p>
-              <p><b>Score:</b> {weakSubject.percentage}%</p>
-            </>
-          )}
+    <div className="page-wrapper">
+      <div className="profile-card">
+        <div className="profile-header">
+          <h2>Your Insights</h2>
         </div>
-      )}
 
-      {Array.isArray(scores) && scores.length === 0 && !loading && (
-        <p className="muted">No quiz scores found. Take some quizzes or seed <code>db.json</code>.</p>
-      )}
+        {loading && <p>Loading your insights…</p>}
+
+        {!loading && error && <p className="error-text">{error}</p>}
+
+        {!loading && !error && (
+          <>
+            {weakSubject && weakSubject.weakSubject && (
+              <div style={{ marginBottom: "18px" }}>
+                <h3>Your Weakest Subject</h3>
+                <p>
+                  {weakSubject.message
+                    ? weakSubject.message
+                    : `Your weakest subject appears to be ${weakSubject.weakSubject} (${weakSubject.percentage}%).`}
+                </p>
+              </div>
+            )}
+
+            {scores.length > 0 && (
+              <>
+                <h3>Your Performance Summary</h3>
+                <div className="scores-table-wrapper">
+                  <table className="scores-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Subject</th>
+                        <th>Percentage</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scores.map((s, i) => (
+                        <tr key={i}>
+                          <td>{i + 1}</td>
+                          <td>{s.subject}</td>
+                          <td>{s.percent.toFixed(1)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
