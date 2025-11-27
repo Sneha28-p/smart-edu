@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import "./profile.css";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE || "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE || "https://smart-edu-backend-cwyi.onrender.com";
 
 function Profile({ onLogout }) {
   const [user, setUser] = useState(null);
