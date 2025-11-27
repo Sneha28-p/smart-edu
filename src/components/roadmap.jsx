@@ -19,7 +19,7 @@ export default function Roadmap() {
     setRoadmap([]);
 
     try {
-      const res = await axios.post("http://localhost:5000/api/roadmap", { topic });
+      const res = await axios.post("https://smart-edu-backend-cwyi.onrender.com/api/roadmap", { topic });
 
       if (res.data.roadmap && res.data.roadmap.length > 0) {
         setRoadmap(res.data.roadmap);
