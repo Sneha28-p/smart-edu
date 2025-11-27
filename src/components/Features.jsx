@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import "./Features.css";
+import "./features.css";
 
 import learningIcon from "../assets/learning2.jpg";
 import roadmap from "../assets/roadmap.jpg";
