@@ -3,7 +3,7 @@ import axios from "axios";
 import "./auth.css";
 import { Link } from "react-router-dom";
 
-const API_BASE_URL = "http://localhost:5000/api";
+const API_BASE_URL = "https://smart-edu-backend-cwyi.onrender.com/api";
 
 function Signup({ onSignup }) {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
