@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import "./quiz.css";
 
-const API_BASE_URL = import.meta?.env?.VITE_API_BASE || "http://localhost:5000";
+const API_BASE_URL = import.meta?.env?.VITE_API_BASE || "https://smart-edu-backend-cwyi.onrender.com";
 
 export default function Quiz() {
   const [topic, setTopic] = useState("");
