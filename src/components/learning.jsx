@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import "./Learning.css";
+import "./learning.css";
 
 import roadmapImg from "../assets/roadmap.jpg";
 import quizImg from "../assets/quiz3.jpg";
