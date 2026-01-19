@@ -149,7 +149,7 @@ Roadmap
 
 | Method | Route          | Description                         |
 | ------ | -------------- | ----------------------------------- |
-| POST   | `/api/roadmap` | Generate study roadmap using Gemini |
+| POST   | `/api/roadmap` | Gives study roadmap based on topic entered using already stored data |
 
 🌱 Future Improvements
 
