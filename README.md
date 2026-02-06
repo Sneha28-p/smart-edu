@@ -28,7 +28,7 @@ It combines **React**, **Node.js**, **Python ML**, and **Google Gemini AI** to c
 
 ### 🔹 AI-Generated Study Roadmap
 - Generates a personalized learning roadmap based on user input  
-- Powered by Gemini API  
+- With perviously stored roadmaps using MongoDB 
 
 ---
 
@@ -44,7 +44,7 @@ It combines **React**, **Node.js**, **Python ML**, and **Google Gemini AI** to c
 - Node.js  
 - Express.js  
 - File-based JSON database (`db.json`)
-- MongoDB (optional, not required)
+- MongoDB (required)
 
 ### **AI & ML**
 - Google Gemini API  
